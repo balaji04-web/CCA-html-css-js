@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chat App</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  /* CSS Variables for consistent theming */
+  :root {
+    --primary-color: #4A90E2; /* A vibrant, professional blue */
+    --primary-dark: #357ABD;
+    --secondary-color: #6C757D; /* Muted grey */
+    --accent-color: #28A745; /* Green for success/send */
+    --accent-dark: #218838;
+
+    --background-light: #FFFFFF;
+    --background-dark: #F0F2F5; /* Light grey for overall background */
+    --border-color: #E0E0E0; /* Lighter border */
+    --text-color-dark: #333333;
+    --text-color-light: #FFFFFF;
+    --text-color-muted: #888888;
+
+    --chat-bg-me: #DCF8C6; /* WhatsApp-like green for 'me' */
+    --chat-bg-other: #FFFFFF; /* White for 'other' */
+    --sidebar-bg: #2C3E50; /* Dark charcoal for sidebar */
+    --sidebar-text: #ECF0F1;
+
+    --shadow-sm: rgba(0, 0, 0, 0.05);
+    --shadow-md: rgba(0, 0, 0, 0.1);
+    --shadow-lg: rgba(0, 0, 0, 0.15);
+
+    --border-radius-sm: 6px;
+    --border-radius-md: 10px;
+    --border-radius-lg: 24px; /* For message bubbles */
+  }
+
+  /* Base styles for body and general elements */
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    background: var(--background-dark);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Ensures full viewport height */
+    color: var(--text-color-dark);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* General Button Styles */
+  button {
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    font-weight: 500;
+    display: inline-flex; /* Allows icon and text to sit side-by-side */
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Space between icon and text */
+  }
+  button:hover {
+    transform: translateY(-1px); /* Subtle lift effect */
+    box-shadow: 0 2px 5px var(--shadow-sm);
+  }
+  button:active {
+    transform: translateY(0); /* Resets on click */
+    box-shadow: none;
+  }
+
+  /* Login Page Styling */
+  #loginPage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px; /* Space between elements */
+    background: var(--background-light);
+    padding: 60px 40px; /* Generous padding */
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 10px 30px var(--shadow-lg); /* Prominent shadow */
+    width: 360px; /* Fixed width */
+    text-align: center;
+  }
+
+  #loginPage h1 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 2.2em; /* Larger heading */
+  }
+
+  #loginPage input {
+    padding: 15px 20px;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-color);
+    width: 100%;
+    box-sizing: border-box; /* Include padding in width */
+    font-size: 1em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  #loginPage input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2); /* Focus ring */
+    outline: none;
+  }
+
+  #loginPage button {
+    padding: 15px 30px;
+    background: var(--primary-color);
+    color: var(--text-color-light);
+    font-size: 1.1em;
+    width: 100%;
+    margin-top: 10px;
+  }
+  #loginPage button:hover {
+    background: var(--primary-dark);
+  }
+
+  /* Main Chat Container Layout */
+  #chatContainer {
+    display: none; /* Hidden by default, shown on login */
+    width: 1100px;
+    height: 700px;
+    background: var(--background-light);
+    box-shadow: 0 15px 40px var(--shadow-lg);
+    border-radius: var(--border-radius-md);
+    overflow: hidden; /* Prevents main scrollbars */
+    display: grid; /* Uses CSS Grid for sidebar and chat panel */
+    grid-template-columns: 300px 1fr; /* Fixed sidebar width, rest for chat */
+  }
+
+  /* Sidebar Styling */
+  .sidebar {
+    background: var(--sidebar-bg);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Pushes header to top, footer to bottom */
+    color: var(--sidebar-text);
+    border-right: 1px solid rgba(255, 255, 255, 0.08); /* Subtle separator */
+  }
+
+  .sidebar-header {
+    text-align: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar-header h2 {
+    margin: 0;
+    font-size: 1.8em;
+    font-weight: 600;
+    color: var(--text-color-light);
+  }
+
+  .sidebar-content {
+    flex-grow: 1; /* Takes up all available space in the middle */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Aligns content to the top */
+    padding-top: 20px;
+    gap: 15px;
+  }
+
+  .sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar-footer button {
+    padding: 12px 20px;
+    background: var(--primary-color);
+    color: var(--text-color-light);
+    font-weight: 500;
+    font-size: 0.95em;
+  }
+  .sidebar-footer button:hover {
+    background: var(--primary-dark);
+  }
+
+  /* Specific styles for logout/clear chat buttons in sidebar */
+  .sidebar-footer .logout-btn,
+  .sidebar-footer .clear-chat-btn {
+    background: var(--secondary-color); /* Muted grey for these actions */
+  }
+  .sidebar-footer .logout-btn:hover,
+  .sidebar-footer .clear-chat-btn:hover {
+    background: #5a6268; /* Darker grey on hover */
+  }
+
+  /* Chat Panel Layout */
+  .chat-panel {
+    display: flex;
+    flex-direction: column; /* Stacks header, chat area, and composer vertically */
+  }
+
+  /* Chat Header Styling */
+  .chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 25px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--background-light);
+    box-shadow: 0 2px 5px var(--shadow-sm); /* Subtle shadow for depth */
+    z-index: 1; /* Ensures shadow is above chat area */
+  }
+
+  .chat-header .chat-title {
+    font-weight: 600;
+    font-size: 1.2em;
+    color: var(--text-color-dark);
+  }
+
+  /* Ensure buttons are hidden from chat-header as they are now in sidebar */
+  .chat-header button {
+    display: none;
+  }
+
+  /* Chat Area Styling (where messages appear) */
+  .chat-area {
+    flex: 1; /* Allows chat area to fill remaining vertical space */
+    padding: 20px;
+    background: #E5DDD5; /* WhatsApp-like background */
+    overflow-y: auto; /* Enables vertical scrolling when content overflows */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    scroll-behavior: smooth; /* Smooth scrolling for auto-scroll */
+
+    /* Custom Scrollbar Styles (for Webkit browsers like Chrome, Safari, Edge) */
+    &::-webkit-scrollbar {
+      width: 8px; /* Width of the scrollbar */
+    }
+    &::-webkit-scrollbar-track {
+      background: var(--background-dark); /* Color of the track */
+      border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-color); /* Color of the scroll thumb */
+      border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: var(--secondary-color); /* Color on hover */
+    }
+  }
+
+  /* Message Container Styling */
+  .message-container {
+    display: flex;
+    align-items: flex-end; /* Aligns avatar and bubble at the bottom */
+    gap: 12px;
+  }
+
+  .message-container.me {
+    justify-content: flex-end; /* My messages align right */
+  }
+
+  .message-container.other {
+    justify-content: flex-start; /* Other messages align left */
+  }
+
+  .message {
+    max-width: 65%;
+    padding: 12px 18px;
+    border-radius: var(--border-radius-lg); /* Highly rounded corners */
+    word-wrap: break-word;
+    box-shadow: 0 1px 3px var(--shadow-sm);
+    position: relative;
+    transition: box-shadow 0.2s ease;
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+
+  .message:hover {
+    box-shadow: 0 2px 6px var(--shadow-md); /* Slightly more pronounced shadow on hover */
+  }
+
+  .message.me {
+    background: var(--chat-bg-me);
+    color: var(--text-color-dark);
+    text-align: right;
+    border-bottom-right-radius: var(--border-radius-sm); /* Pointy corner for 'me' */
+  }
+
+  .message.other {
+    background: var(--chat-bg-other);
+    color: var(--text-color-dark);
+    text-align: left;
+    border-bottom-left-radius: var(--border-radius-sm); /* Pointy corner for 'other' */
+  }
+
+  .message strong {
+    font-weight: 600;
+    color: var(--primary-dark);
+    display: block; /* Ensures sender name is on its own line */
+    margin-bottom: 4px;
+  }
+
+  .message .meta {
+    font-size: 0.75em;
+    color: var(--text-color-muted);
+    margin-top: 6px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .message .actions {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    display: flex;
+    gap: 6px;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.2s ease;
+  }
+
+  .message:hover .actions {
+    opacity: 1; /* Visible on message hover */
+  }
+
+  .message .actions button {
+    background: rgba(255, 255, 255, 0.9); /* Semi-transparent background */
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--secondary-color);
+    font-size: 0.7em;
+    padding: 3px 6px;
+    min-width: unset; /* Override general button styles */
+    min-height: unset;
+    transform: none; /* Override general button hover */
+    box-shadow: none;
+  }
+  .message .actions button:hover {
+    background: var(--primary-color);
+    color: var(--text-color-light);
+    border-color: var(--primary-color);
+    transform: none;
+  }
+
+  /* Avatar Styling */
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--text-color-light);
+    flex-shrink: 0; /* Prevents shrinking */
+    font-size: 1.1em;
+    box-shadow: 0 2px 5px var(--shadow-sm);
+  }
+
+  /* Composer (Input Area) Styling */
+  .composer {
+    display: flex;
+    align-items: flex-end; /* Aligns items to the bottom for multi-line textareas */
+    gap: 10px;
+    padding: 15px 20px;
+    background: var(--background-light);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -2px 5px var(--shadow-sm); /* Subtle shadow for depth */
+  }
+
+  .composer textarea {
+    flex: 1; /* Takes up available space */
+    padding: 12px 18px;
+    border-radius: var(--border-radius-lg); /* Rounded like message bubbles */
+    border: 1px solid var(--border-color);
+    resize: none; /* Disable manual resizing */
+    min-height: 48px; /* Minimum height */
+    max-height: 150px; /* Maximum height before internal scroll */
+    font-size: 1em;
+    line-height: 1.4;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  .composer textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    outline: none;
+  }
+
+  .composer .file-attach-btn {
+    background: none;
+    color: var(--secondary-color);
+    font-size: 28px; /* Icon size */
+    padding: 0;
+    width: 48px; /* Fixed width for circular button */
+    height: 48px; /* Fixed height for circular button */
+    border-radius: 50%; /* Circular button */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+  .composer .file-attach-btn:hover {
+    color: var(--primary-color);
+    background-color: rgba(74, 144, 226, 0.1); /* Light background on hover */
+    transform: translateY(-1px);
+  }
+  .composer .file-attach-btn:active {
+    transform: translateY(0);
+  }
+
+  .composer .send-btn {
+    background: var(--accent-color);
+    color: var(--text-color-light);
+    padding: 12px 20px;
+    border-radius: var(--border-radius-lg); /* Rounded like message bubbles */
+    font-size: 1em;
+    min-width: 80px; /* Ensure button has minimum width */
+  }
+  .composer .send-btn:hover {
+    background: var(--accent-dark);
+  }
+
+  /* File Link Styling */
+  a.file-link {
+    text-decoration: none;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  a.file-link:hover {
+    text-decoration: underline;
+    color: var(--primary-dark);
+  }
+
+  .badge {
+    font-size: 0.75em;
+    color: var(--text-color-muted);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 992px) {
+    #chatContainer {
+      width: 95%;
+      height: 95vh;
+      grid-template-columns: 1fr; /* Sidebar hidden, chat takes full width */
+      border-radius: var(--border-radius-md);
+    }
+    .sidebar {
+      display: none; /* Hide sidebar on smaller screens */
+    }
+    #loginPage {
+      width: 90%;
+      padding: 40px 25px;
+    }
+  }
+
+  @media (max-width: 576px) {
+    #loginPage {
+      padding: 30px 20px;
+    }
+    #loginPage h1 {
+      font-size: 1.8em;
+    }
+    .chat-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 15px;
+    }
+    .chat-header button {
+      margin-left: 0;
+      width: 100%;
+    }
+    .composer {
+      flex-wrap: wrap; /* Allow composer items to wrap on very small screens */
+      padding: 10px;
+    }
+    .composer textarea {
+      min-height: 40px;
+      padding: 10px 15px;
+    }
+    .composer .file-attach-btn, .composer .send-btn {
+      width: auto; /* Auto width for buttons */
+      height: auto;
+      border-radius: var(--border-radius-sm);
+      padding: 10px 15px;
+    }
+    .composer .file-attach-btn {
+      font-size: 1.2em;
+      padding: 10px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginPage">
+  <h1>Welcome Balaji Chat_Application</h1>
+  <input id="loginUser" placeholder="Username">
+  <input id="loginPass" type="password" placeholder="Password">
+  <button id="doLogin">Login</button>
+</div>
+
+<div id="chatContainer" class="hidden">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Balaji Chat_App</h2>
+    </div>
+    <div class="sidebar-content">
+      <!-- Wallpaper buttons -->
+      <input type="file" id="wpFile" accept="image/*" style="display:none;">
+      <button id="changeWpBtn"><i class="material-icons">wallpaper</i> Upload Wallpaper</button>
+      <button id="resetWpBtn"><i class="material-icons">refresh</i> Reset Wallpaper</button>
+    </div>
+    <div class="sidebar-footer">
+      <!-- Clear Chat and Logout buttons -->
+      <button id="clearChatBtn" class="clear-chat-btn"><i class="material-icons">delete_sweep</i> Clear Chat</button>
+      <button id="logoutBtn" class="logout-btn"><i class="material-icons">logout</i> Logout</button>
+    </div>
+  </div>
+  <div class="chat-panel">
+    <div class="chat-header">
+      <div class="chat-title">Logged in as: <span id="topName">Not logged in</span></div>
+      <!-- Clear Chat and Logout buttons were here, now moved to sidebar -->
+    </div>
+    <div class="chat-area" id="chatArea">
+      <div id="messages"></div>
+    </div>
+    <div class="composer">
+      <textarea id="msgInput" placeholder="Type a message..." rows="1"></textarea>
+      <input type="file" id="fileInput" style="display:none;">
+      <button class="file-attach-btn" type="button" title="Attach file" onclick="document.getElementById('fileInput').click()">
+        <i class="material-icons">attach_file</i>
+      </button>
+      <button id="sendBtn" class="send-btn"><i class="material-icons">send</i> Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/** SET THIS to your Apps Script deployment URL **/
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxdsUWVOMP14QAdXtxUyQUGQBZQHol3qZxtGEDXha2o1Y_d1Ij4GQn1RvCWLF2NJA6V/exec"; // Replace with your deployed Apps Script URL
+
+/** Simple demo users **/
+const users = { Balaji:"balaji", Chrisly:"keziah" };
+
+let currentUser = null;
+let messages = [];
+let editingIndex = null;
+
+/* ---------- Wallpaper Functions ---------- */
+function applyWallpaper(){
+  const wp = localStorage.getItem('wp_'+currentUser);
+  const chatArea = document.getElementById('chatArea');
+  if (wp) {
+    chatArea.style.backgroundImage = `url(${wp})`;
+    chatArea.style.backgroundSize = 'cover';
+    chatArea.style.backgroundPosition = 'center';
+    chatArea.style.backgroundRepeat = 'no-repeat';
+  } else {
+    chatArea.style.backgroundImage = '';
+  }
+}
+document.getElementById('changeWpBtn').onclick = () => document.getElementById('wpFile').click();
+document.getElementById('wpFile').onchange = function(){
+  const file = this.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { localStorage.setItem('wp_'+currentUser, e.target.result); applyWallpaper(); };
+  reader.readAsDataURL(file);
+};
+document.getElementById('resetWpBtn').onclick = () => { localStorage.removeItem('wp_'+currentUser); applyWallpaper(); };
+
+/* ---------- Authentication Functions ---------- */
+document.getElementById('doLogin').onclick = async function(){
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if (users[u] && users[u] === p) {
+    currentUser = u;
+    localStorage.setItem('currentUser', currentUser);
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('chatContainer').classList.remove('hidden');
+    document.getElementById('topName').innerText = currentUser;
+    // Display clear chat button only for 'Balaji'
+    document.getElementById('clearChatBtn').style.display = (currentUser === 'Balaji') ? 'inline-flex' : 'none';
+    applyWallpaper();
+    await loadMessages();
+    startAutoRefresh();
+    document.getElementById('msgInput').focus(); // Auto-focus after login
+  } else {
+    alert('Invalid username or password');
+  }
+};
+
+document.getElementById('logoutBtn').onclick = function(){
+  localStorage.removeItem('currentUser');
+  currentUser = null;
+  stopAutoRefresh();
+  document.getElementById('chatContainer').classList.add('hidden');
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('loginUser').value = ''; // Clear login fields
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginUser').focus(); // Focus on username field
+};
+
+/* ---------- Chat: Load & Render Messages ---------- */
+async function loadMessages(){
+  try {
+    const res = await fetch(WEB_APP_URL + "?action=getMessages");
+    const data = await res.json();
+    messages = Array.isArray(data) ? data : [];
+    renderMessages();
+  }
+  catch (e) {
+    console.error("Error loading messages:", e);
+  }
+}
+
+function renderMessages(){
+  const wrap = document.getElementById('messages');
+  // Check if user is near the bottom before rendering to decide on auto-scroll
+  const shouldScroll = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 50;
+
+  wrap.innerHTML = ''; // Clear existing messages
+  messages.forEach((m, index) => {
+    const container = document.createElement('div');
+    container.className = 'message-container ' + (m.sender === currentUser ? 'me' : 'other');
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = (m.sender || '?').charAt(0).toUpperCase();
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message ' + (m.sender === currentUser ? 'me' : 'other');
+
+    let html = `<strong>${escapeHtml(m.sender || '')}</strong>: ${linkify(escapeHtml(m.text || ''))}`;
+    if (m.file) {
+      if ((m.fileType || '').startsWith('image/')) {
+        html += `<br><img src="${m.file}" alt="${escapeHtml(m.fileName || '')}" style="max-width:220px;border-radius:10px; margin-top: 8px;">`;
+      } else {
+        html += `<br><a class="file-link" href="${m.file}" download="${escapeHtml(m.fileName || 'file')}"><i class="material-icons" style="font-size: 1.2em;">insert_drive_file</i> ${escapeHtml(m.fileName || 'Download')}</a>`;
+      }
+    }
+
+    bubble.innerHTML = html;
+
+    // Add edit/delete actions for current user's messages
+    if (m.sender === currentUser) {
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      const eb = document.createElement('button');
+      eb.innerHTML = '<i class="material-icons" style="font-size: 1em;">edit</i>';
+      eb.title = 'Edit';
+      eb.onclick = () => beginEdit(index);
+      const db = document.createElement('button');
+      db.innerHTML = '<i class="material-icons" style="font-size: 1em;">delete</i>';
+      db.title = 'Delete';
+      db.onclick = () => deleteMessage(index);
+      actions.appendChild(eb);
+      actions.appendChild(db);
+      bubble.appendChild(actions);
+    }
+
+    // Append avatar and bubble in correct order
+    if (m.sender === currentUser){ container.appendChild(bubble); container.appendChild(avatar); }
+    else { container.appendChild(avatar); container.appendChild(bubble); }
+
+    wrap.appendChild(container);
+  });
+
+  // Auto-scroll to bottom only if user was already near the bottom
+  if (shouldScroll) {
+    const area = document.getElementById('chatArea');
+    area.scrollTop = area.scrollHeight;
+  }
+  document.getElementById('msgInput').focus(); // Always focus on the message input after rendering
+}
+
+/* ---------- Chat: Send / Edit / Delete / Clear Functions ---------- */
+document.getElementById('sendBtn').onclick = sendMessage;
+document.getElementById('msgInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// Auto-resize textarea as user types
+document.getElementById('msgInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = (this.scrollHeight) + 'px';
+});
+
+
+async function sendMessage(){
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  const fileInput = document.getElementById('fileInput');
+  const file = fileInput.files[0];
+
+  // Handle message editing
+  if (editingIndex !== null) {
+    if (!text) { alert('Message cannot be empty'); return; }
+    try {
+      await fetch(WEB_APP_URL, {
+        method:'POST',
+        body: JSON.stringify({ action:'editMessage', index:editingIndex, newText:text })
+      });
+      editingIndex = null;
+      input.value = '';
+      input.style.height = '48px'; // Reset textarea height
+      await loadMessages();
+    } catch (err) {
+      console.error('Edit error:', err);
+    }
+    return;
+  }
+
+  // Handle sending new message
+  if (!text && !file) return; // Don't send empty messages or without file
+
+  const msgObj = { sender: currentUser, text: text };
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = async function(e){
+      msgObj.file = e.target.result;
+      msgObj.fileType = file.type || '';
+      msgObj.fileName = file.name || 'file';
+      await postMessage(msgObj);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    await postMessage(msgObj);
+  }
+}
+
+async function postMessage(msgObj){
+  try {
+    await fetch(WEB_APP_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'addMessage', message:msgObj })
+    });
+    document.getElementById('msgInput').value = '';
+    document.getElementById('msgInput').style.height = '48px'; // Reset textarea height
+    document.getElementById('fileInput').value = ''; // Clear file input
+    await loadMessages();
+  } catch(err) {
+    alert("Error: Could not send message. Check Web App URL.");
+    console.error(err);
+  }
+}
+
+function beginEdit(index){
+  const msg = messages[index];
+  if (!msg || msg.sender !== currentUser) return;
+  editingIndex = index;
+  const input = document.getElementById('msgInput');
+  input.value = msg.text || '';
+  input.focus();
+  input.style.height = 'auto'; // Adjust height for current text
+  input.style.height = (input.scrollHeight) + 'px';
+}
+
+async function deleteMessage(index){
+  if (!confirm('Delete this message?')) return;
+  try {
+    await fetch(WEB_APP_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'deleteMessage', index })
+    });
+    await loadMessages();
+  } catch(err) {
+    alert("Error: Could not delete message.");
+    console.error(err);
+  }
+}
+
+document.getElementById('clearChatBtn').onclick = async function(){
+  if (currentUser !== 'Balaji') return alert('Only Balaji can clear chat!');
+  if (!confirm('Are you sure you want to clear all chat messages?')) return;
+  try {
+    await fetch(WEB_APP_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'clearMessages', user: currentUser })
+    });
+    await loadMessages();
+  } catch(e){
+    alert("Error: Could not clear chat.");
+    console.error(e);
+  }
+};
+
+/* ---------- Auto Refresh Functions ---------- */
+let refreshTimer = null;
+function startAutoRefresh(){
+  stopAutoRefresh();
+  refreshTimer = setInterval(loadMessages, 2000);
+}
+function stopAutoRefresh(){
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+}
+
+/* ---------- Utility Functions ---------- */
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+function linkify(text){
+  const urlRegex = /\bhttps?:\/\/[^\s]+/gi;
+  return text.replace(urlRegex, m => `<a href="${m}" target="_blank" rel="noopener">${m}</a>`);
+}
+
+/* ---------- Auto-login on Page Load ---------- */
+window.onload = async function(){
+  const saved = localStorage.getItem('currentUser');
+  if (saved && users[saved]) {
+    currentUser = saved;
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('chatContainer').classList.remove('hidden');
+    document.getElementById('topName').innerText = currentUser;
+    document.getElementById('clearChatBtn').style.display = (currentUser === 'Balaji') ? 'inline-flex' : 'none';
+    applyWallpaper();
+    await loadMessages();
+    startAutoRefresh();
+    document.getElementById('msgInput').focus(); // Auto-focus on load if logged in
+  } else {
+    document.getElementById('loginUser').focus(); // Focus on username if not logged in
+  }
+};
+</script>
+</body>
+</html>
